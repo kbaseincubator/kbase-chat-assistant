@@ -1,0 +1,5 @@
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Some Model files 
+model/*v1.py
