@@ -9,3 +9,6 @@ Uses Poetry to handle requirements
 2. Run poetry install 
 
 ## TODOs
+
+1. Add the Knowledge Graph
+2. User interface
