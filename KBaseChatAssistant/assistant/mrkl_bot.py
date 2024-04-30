@@ -1,11 +1,17 @@
 import sys
 import os
 from KBaseChatAssistant.assistant.chatbot import KBaseChatBot
+from KBaseChatAssistant.assistant.prompts import MRKL_PROMPT
 from langchain_core.language_models.llms import LLM
 from KBaseChatAssistant.tools.ragchain import create_ret_chain
 from KBaseChatAssistant.embeddings.embeddings import DEFAULT_CATALOG_DB_DIR, DEFAULT_DOCS_DB_DIR
-from langchain.agents import initialize_agent, Tool
-from langchain.agents import AgentType
+from langchain.agents import initialize_agent, Tool, AgentExecutor, load_tools, AgentType, create_react_agent
+from KBaseChatAssistant.tools.information_tool import InformationTool
+from langchain.agents.format_scratchpad import format_to_openai_function_messages
+from langchain.tools.render import format_tool_to_openai_function
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.agents.output_parsers import OpenAIFunctionsAgentOutputParser
+from langchain.tools import tool
 
 class MRKL_bot(KBaseChatBot):
     _openai_key: str
@@ -28,17 +34,67 @@ class MRKL_bot(KBaseChatBot):
           #Create tools here
           #Get the prompts 
         doc_chain = create_ret_chain(llm = self._llm, openai_key = self._openai_key, persist_directory = DEFAULT_DOCS_DB_DIR )
-        
+        @tool("KG retrieval tool", return_direct=True)   
+        def KGretrieval_tool(input: str):
+           """This tool has the KBase app Knowledge Graph. Useful for when you need to confirm the existance of KBase applications and their tooltip, version, category and data objects.
+           This tool can also be used for finding total number of apps or which data objects are shared between apps.
+           The input should always be a KBase app name or data object name and should not include any special characters or version number."""
+           return self._create_KG_agent().invoke({"input": input})['output']
+            
         tools = [
         Tool.from_function 
         (
             name="KBase Documentation",
             func=doc_chain.run,
-            description="This tool has the KBase documentation. Useful for when you need to answer questions about how to use Kbase applications. Input should be a fully formed question."
-        ),]
+            description="This tool has the KBase documentation. Useful for when you need to find KBase applications to use for user tasks and how to use them. Input should be a fully formed question."
+        ),
+        KGretrieval_tool]
+        agent = create_react_agent(llm = self._llm, tools = tools, prompt = MRKL_PROMPT)
+    
+        # Create an agent executor by passing in the agent and tools
+        self.agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True,handle_parsing_errors=True)
+        # SUFFIX = """Provide the final answer and terminate the chain of thought once you have an answer. Begin! 
 
-        SUFFIX = """Provide the final answer and terminate the chain of thought once you have an answer. Begin! 
+        # Question: {input}
+        # Thought:{agent_scratchpad}"""
+        # self.agent = initialize_agent(tools, self._llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True, handle_parsing_errors=True, agent_kwargs={'suffix':SUFFIX})
+    
+    def _create_KG_agent(self):
+        
+        tools = [InformationTool()]
 
-        Question: {input}
-        Thought:{agent_scratchpad}"""
-        self.agent = initialize_agent(tools, self._llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True, handle_parsing_errors=True, agent_kwargs={'suffix':SUFFIX})
+        llm_with_tools = self._llm.bind(functions=[format_tool_to_openai_function(t) for t in tools])
+        
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    "You are a helpful tool that finds information about KBase applications in the Knowledge Graph "
+                    " and recommends them. Use the tools provided to you to find KBase apps and related properties.  If tools require follow up questions, "
+                    "make sure to ask the user for clarification. Make sure to include any "
+                    "available options that need to be clarified in the follow up questions "
+                    "Do only the things the user specifically requested. ",
+                ),
+                MessagesPlaceholder(variable_name="chat_history"),
+                ("user", "{input}"),
+                MessagesPlaceholder(variable_name="agent_scratchpad"),
+            ]
+        )
+        
+        agent = (
+            {
+                "input": lambda x: x["input"],
+                "chat_history": lambda x: _format_chat_history(x["chat_history"])
+                if x.get("chat_history")
+                else [],
+                "agent_scratchpad": lambda x: format_to_openai_function_messages(
+                    x["intermediate_steps"]
+                ),
+            }
+            | prompt
+            | llm_with_tools
+            | OpenAIFunctionsAgentOutputParser()
+        )
+        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+        return agent_executor
+        
