@@ -50,7 +50,7 @@ def test_mrkl_bot_init_with_env_var(mock_llm):
 def test_mrkl_bot_agent_creation(mock_llm):
     # Test MRKL_bot agent creation
     bot = MRKL_bot(llm=mock_llm)
-    assert bot.agent is not None
-    assert isinstance(bot.agent.tools[0], Tool)
+    assert bot.agent_executor is not None
+    assert isinstance(bot.agent_executor.tools[0], Tool)
 
 
