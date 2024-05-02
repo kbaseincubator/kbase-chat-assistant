@@ -12,6 +12,10 @@ token = "not_a_token"
 FAKE_OPENAI_KEY = "fake_openai_api_key"
 FAKE_OPENAI_KEY_ENVVAR = "not_an_openai_key_environment"
 OPENAI_KEY = "OPENAI_API_KEY"
+# Set up fake Neo4j authentication credentials for testing
+os.environ["NEO4J_URI"] = "fake_uri"
+os.environ["NEO4J_USERNAME"] = "fake_username"
+os.environ["NEO4J_PASSWORD"] = "fake_password"
 
 class MockLLM(LLM):
     def _call():
