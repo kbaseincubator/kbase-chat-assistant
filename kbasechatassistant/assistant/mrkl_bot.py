@@ -1,12 +1,12 @@
 import sys
 import os
-from KBaseChatAssistant.assistant.chatbot import KBaseChatBot
-from KBaseChatAssistant.assistant.prompts import MRKL_PROMPT
+from kbasechatassistant.assistant.chatbot import KBaseChatBot
+from kbasechatassistant.assistant.prompts import MRKL_PROMPT
 from langchain_core.language_models.llms import LLM
-from KBaseChatAssistant.tools.ragchain import create_ret_chain
-from KBaseChatAssistant.embeddings.embeddings import DEFAULT_CATALOG_DB_DIR, DEFAULT_DOCS_DB_DIR
+from kbasechatassistant.tools.ragchain import create_ret_chain
+from kbasechatassistant.embeddings.embeddings import DEFAULT_CATALOG_DB_DIR, DEFAULT_DOCS_DB_DIR
 from langchain.agents import initialize_agent, Tool, AgentExecutor, load_tools, AgentType, create_react_agent
-from KBaseChatAssistant.tools.information_tool import InformationTool
+from kbasechatassistant.tools.information_tool import InformationTool
 from langchain.agents.format_scratchpad import format_to_openai_function_messages
 from langchain.tools.render import format_tool_to_openai_function
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder

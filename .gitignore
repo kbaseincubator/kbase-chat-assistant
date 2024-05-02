@@ -10,7 +10,7 @@ __pycache__/
 .ipynb_checkpoints
 
 # Some Model files 
-KBaseChatAssistant/models/*v1.py
+kbasechatassistant/models/*v1.py
 
 # Assistant Files
-KBaseChatAssistant/assistant/*v1.py
+kbasechatassistant/assistant/*v1.py

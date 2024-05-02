@@ -2,10 +2,10 @@
 
 import sys, os
 import pytest
-from KBaseChatAssistant.assistant.mrkl_bot import MRKL_bot
+from kbasechatassistant.assistant.mrkl_bot import MRKL_bot
 from langchain_core.language_models.llms import LLM
-from KBaseChatAssistant.tools.ragchain import create_ret_chain
-from KBaseChatAssistant.embeddings.embeddings import DEFAULT_CATALOG_DB_DIR, DEFAULT_DOCS_DB_DIR
+from kbasechatassistant.tools.ragchain import create_ret_chain
+from kbasechatassistant.embeddings.embeddings import DEFAULT_CATALOG_DB_DIR, DEFAULT_DOCS_DB_DIR
 from langchain.agents import Tool, AgentType
 
 token = "not_a_token"

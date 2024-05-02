@@ -9,7 +9,7 @@ from langchain.callbacks.manager import (
 from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools import BaseTool
 
-from KBaseChatAssistant.util.semantic import get_candidates, graph
+from kbasechatassistant.util.semantic import get_candidates, graph
 
 
 description_query = """
