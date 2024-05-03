@@ -17,6 +17,7 @@ os.environ["NEO4J_URI"] = "fake_uri"
 os.environ["NEO4J_USERNAME"] = "fake_username"
 os.environ["NEO4J_PASSWORD"] = "fake_password"
 
+
 class MockLLM(LLM):
     def _call():
         pass
@@ -37,7 +38,7 @@ def test_mrkl_bot_init_with_api_key(mock_llm):
     # Test MRKL_bot initialization with an API key
     bot = MRKL_bot(llm=mock_llm, openai_api_key=FAKE_OPENAI_KEY)
     assert bot._openai_key == FAKE_OPENAI_KEY
-
+    assert bot._uri == "fake_uri"
 
 def test_mrkl_bot_init_missing_api_key(mock_llm, monkeypatch):
     # Test MRKL_bot initialization with missing API key

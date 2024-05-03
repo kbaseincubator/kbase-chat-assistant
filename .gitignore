@@ -14,3 +14,4 @@ kbasechatassistant/models/*v1.py
 
 # Assistant Files
 kbasechatassistant/assistant/*v1.py
+kbasechatassistant/assistant/*v2.py
