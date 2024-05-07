@@ -2,20 +2,23 @@
 
 import sys, os
 import pytest
+
+# Set up fake Neo4j authentication credentials for testing
+os.environ["NEO4J_URI"] = "fake_uri"
+os.environ["NEO4J_USERNAME"] = "fake_username"
+os.environ["NEO4J_PASSWORD"] = "fake_password"
+
 from kbasechatassistant.assistant.mrkl_bot import MRKL_bot
 from langchain_core.language_models.llms import LLM
 from kbasechatassistant.tools.ragchain import create_ret_chain
 from kbasechatassistant.embeddings.embeddings import DEFAULT_CATALOG_DB_DIR, DEFAULT_DOCS_DB_DIR
 from langchain.agents import Tool, AgentType
+from langchain_community.graphs import Neo4jGraph
 
 token = "not_a_token"
 FAKE_OPENAI_KEY = "fake_openai_api_key"
 FAKE_OPENAI_KEY_ENVVAR = "not_an_openai_key_environment"
 OPENAI_KEY = "OPENAI_API_KEY"
-# Set up fake Neo4j authentication credentials for testing
-os.environ["NEO4J_URI"] = "fake_uri"
-os.environ["NEO4J_USERNAME"] = "fake_username"
-os.environ["NEO4J_PASSWORD"] = "fake_password"
 
 
 class MockLLM(LLM):
@@ -25,9 +28,16 @@ class MockLLM(LLM):
     def _llm_type():
         pass
 
+class MockNeo4jGraph(Neo4jGraph):
+    def __init__(self):
+        pass
+
 @pytest.fixture
 def mock_llm():
     return MockLLM()
+@pytest.fixture
+def mock_neo4j_graph():
+    return MockNeo4jGraph()
 
 @pytest.fixture(autouse=True)
 def automock_api_key(monkeypatch):

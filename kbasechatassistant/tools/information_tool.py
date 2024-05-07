@@ -9,7 +9,7 @@ from langchain.callbacks.manager import (
 from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools import BaseTool
 
-from kbasechatassistant.util.semantic import get_candidates, graph
+from kbasechatassistant.util.semantic import Semantic
 
 
 description_query = """
@@ -27,7 +27,8 @@ RETURN final_context LIMIT 1
 """
 
 def get_information(entity: str, type: str) -> str:
-    candidates = get_candidates(entity, type)
+    semantic = Semantic()
+    candidates = semantic.get_candidates(entity, type)
     if not candidates:
         return "No information was found about the KBase app in the database"
     elif len(candidates) > 1:
@@ -36,7 +37,7 @@ def get_information(entity: str, type: str) -> str:
             "Need additional information, which of these "
             f"did you mean: {newline + newline.join(str(d) for d in candidates)}"
         )
-    data = graph.query(
+    data = semantic.graph.query(
         description_query, params={"candidate": candidates[0]["candidate"]}
     )
     print("candidate name provided=",candidates)
