@@ -1,24 +1,26 @@
 import sys
 import os
-from KBaseChatAssistant.assistant.chatbot import KBaseChatBot
-from KBaseChatAssistant.assistant.prompts import MRKL_PROMPT
+from kbasechatassistant.assistant.chatbot import KBaseChatBot
+from kbasechatassistant.assistant.prompts import MRKL_PROMPT
 from langchain_core.language_models.llms import LLM
-from KBaseChatAssistant.tools.ragchain import create_ret_chain
-from KBaseChatAssistant.embeddings.embeddings import DEFAULT_CATALOG_DB_DIR, DEFAULT_DOCS_DB_DIR
+from kbasechatassistant.tools.ragchain import create_ret_chain
+from kbasechatassistant.embeddings.embeddings import DEFAULT_CATALOG_DB_DIR, DEFAULT_DOCS_DB_DIR
 from langchain.agents import initialize_agent, Tool, AgentExecutor, load_tools, AgentType, create_react_agent
-from KBaseChatAssistant.tools.information_tool import InformationTool
+from kbasechatassistant.tools.information_tool import InformationTool
 from langchain.agents.format_scratchpad import format_to_openai_function_messages
 from langchain.tools.render import format_tool_to_openai_function
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.agents.output_parsers import OpenAIFunctionsAgentOutputParser
 from langchain.tools import tool
+from kbasechatassistant.util.neo4j_config import Neo4jConfig
 
 class MRKL_bot(KBaseChatBot):
     _openai_key: str
 
-    def __init__(self:"MRKL_bot", llm: LLM, openai_api_key: str = None) -> None:
+    def __init__(self:"MRKL_bot", llm: LLM, openai_api_key: str = None, neo4j_conf: Neo4jConfig = None) -> None:
         super().__init__(llm)
         self.__setup_openai_api_key(openai_api_key)
+        self.__setup_neo4j(neo4j_conf)
         self.__init_mrkl()
         
 
@@ -29,6 +31,19 @@ class MRKL_bot(KBaseChatBot):
             self._openai_key = os.environ["OPENAI_API_KEY"]
         else:
             raise KeyError("Missing environment variable OPENAI_API_KEY")
+            
+    def __setup_neo4j(self, neo4j_conf: Neo4jConfig) -> None:
+        if neo4j_conf is not None:
+            self._uri = neo4j_conf.uri
+            self._username = neo4j_conf.username
+            self._password  = neo4j_conf.password
+        elif os.environ.get("NEO4J_URI") and os.environ.get("NEO4J_USERNAME") and os.environ.get("NEO4J_PASSWORD"):
+            self._uri = os.environ["NEO4J_URI"]
+            self._username = os.environ["NEO4J_USERNAME"]
+            self._password  = os.environ["NEO4J_PASSWORD"]
+        else:
+            raise KeyError("Missing environment variable for Neo4j")
+    
         
     def __init_mrkl(self: "MRKL_bot") -> None:
           #Create tools here
