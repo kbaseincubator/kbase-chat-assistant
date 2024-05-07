@@ -15,3 +15,11 @@ kbasechatassistant/models/*v1.py
 # Assistant Files
 kbasechatassistant/assistant/*v1.py
 kbasechatassistant/assistant/*v2.py
+kbasechatassistant/assistant/*v3.py
+
+#Tool Files
+kbasechatassistant/tools/*v1.py
+
+#Util Files
+kbasechatassistant/util/*v1.py
+

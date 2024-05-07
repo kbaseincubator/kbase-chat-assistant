@@ -13,6 +13,7 @@ from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.agents.output_parsers import OpenAIFunctionsAgentOutputParser
 from langchain.tools import tool
 from kbasechatassistant.util.neo4j_config import Neo4jConfig
+from langchain.memory import ConversationBufferMemory
 
 class MRKL_bot(KBaseChatBot):
     _openai_key: str
@@ -64,10 +65,11 @@ class MRKL_bot(KBaseChatBot):
             description="This tool has the KBase documentation. Useful for when you need to find KBase applications to use for user tasks and how to use them. Input should be a fully formed question."
         ),
         KGretrieval_tool]
+        memory = ConversationBufferMemory(memory_key="mrkl_chat_history",return_messages=True)
         agent = create_react_agent(llm = self._llm, tools = tools, prompt = MRKL_PROMPT)
     
         # Create an agent executor by passing in the agent and tools
-        self.agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True,handle_parsing_errors=True)
+        self.agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, memory = memory, handle_parsing_errors=True)
         # SUFFIX = """Provide the final answer and terminate the chain of thought once you have an answer. Begin! 
 
         # Question: {input}
