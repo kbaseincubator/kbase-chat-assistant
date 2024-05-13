@@ -12,3 +12,5 @@ Uses Poetry to handle requirements
 
 1. Add the Knowledge Graph
 2. User interface
+
+![KBaseChatAssistant](chat_asst_screenshot.pdf)
