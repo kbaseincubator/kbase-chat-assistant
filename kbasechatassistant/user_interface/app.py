@@ -26,19 +26,6 @@ def main():
         llm = ChatOpenAI(temperature=0, model="gpt-4", streaming=True)
         st.session_state["gpt_agent"] = MRKL_bot(llm=llm)
     
-    # if st.session_state.load_state:
-        
-    #     # Create language model for chatbot
-    #     llm = ChatOpenAI(temperature=0, model="gpt-4", streaming=True)
-        
-    #     # Create MRKL bot agent
-    #     gpt_agent = MRKL_bot(llm=llm)
-        
-    #     # Set load state to False to prevent reinitialization
-    #     st.session_state.load_state = False
-
-    
-    
     # Initialize chat history
     if "messages" not in st.session_state:
         st.session_state["messages"] = [ChatMessage(role="assistant", content="How can I help you?")]
@@ -57,8 +44,8 @@ def main():
             cfg = RunnableConfig()
             cfg["callbacks"] = [st_callback]
             response = st.session_state["gpt_agent"].agent_executor.invoke({"input": prompt},cfg)
-            st.session_state.messages.append(ChatMessage(role="assistant",content=response['output']))
             st.write(response['output'])
-            
+        st.session_state.messages.append(ChatMessage(role="assistant",content=response['output']))
+        
 if __name__ == "__main__":
     main()
