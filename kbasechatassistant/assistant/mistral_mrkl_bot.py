@@ -1,17 +1,17 @@
 import sys
 import os
-from KBaseChatAssistant.assistant.chatbot import KBaseChatBot
+from kbasechatassistant.assistant.chatbot import KBaseChatBot
 from langchain_core.language_models.llms import LLM
-from KBaseChatAssistant.tools.ragchain import create_mistral_ret_chain
-from KBaseChatAssistant.embeddings.embeddings import HF_CATALOG_DB_DIR, HF_DOCS_DB_DIR
+from kbasechatassistant.tools.ragchain import create_mistral_ret_chain
+from kbasechatassistant.embeddings.embeddings import HF_CATALOG_DB_DIR, HF_DOCS_DB_DIR
 from langchain.agents import initialize_agent, AgentExecutor, create_json_chat_agent
 from langchain.agents import AgentType
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.prompts import PromptTemplate, ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from langchain.memory import ConversationBufferMemory
 from langchain.tools import Tool
 
 SYSTEM_PROMPT_TEMPLATE = """
-You are a halpful KBase chat assistant desgined to help users determine how to use KBase apps for thier data analysis. 
+You are a helpful KBase chat assistant desgined to help users determine how to use KBase apps for thier data analysis. When asked for app suggestions limit your suggestions to a maximum of two apps.
 Each task requires multiple steps that are represented by a markdown code snippet of a json blob.
 The json structure should contain the following keys:
 thought -> your thoughts
@@ -28,7 +28,7 @@ If you have enough information to answer the query use the tool "Final Answer". 
 If there is not enough information, keep trying.
 
 """
-HUMAN_PROMP_TEMPLATE = """
+HUMAN_PROMPT_TEMPLATE = """
 Add the word "STOP" after each markdown snippet. Example:
 
 ```json
@@ -38,7 +38,9 @@ Add the word "STOP" after each markdown snippet. Example:
 ```
 STOP
 
-This is my query="{input}". Write only the next step needed to solve it.
+Question: {input}
+
+Write only the next step needed to solve it. Keep you answers to the point.
 Your answer should be based in the previous tools executions, even if you think you know the answer.
 Remember to add STOP after each snippet and tool names can only be {tool_names} or Final Answer.
 
@@ -46,38 +48,49 @@ These were the previous steps given to solve this query and the information you 
 """
 class Mistral_MRKL_bot(KBaseChatBot):
 
-    def __init__(self:"Llama2_MRKL_bot", llm: LLM) -> None:
+    def __init__(self:"Mistral_MRKL_bot", llm: LLM) -> None:
         super().__init__(llm)
         self.__init_mrkl()
         
-    def __init_mrkl(self: "Llama2_MRKL_bot") -> None:
+    def __init_mrkl(self: "Mistral_MRKL_bot") -> None:
           #Create tools here
           #Get the prompts 
-        doc_chain = create_llama2_ret_chain(llm = self._llm, persist_directory = HF_DOCS_DB_DIR )
+        doc_chain = create_mistral_ret_chain(llm = self._llm, persist_directory = HF_DOCS_DB_DIR )
         
         tools = [
         Tool.from_function 
         (
             name="KBase Documentation",
-            func=create_mistral_ret_chain.run,
+            func=doc_chain.run,
             description="This tool has the KBase documentation. Useful for when you need to answer questions about how to use Kbase applications. Input should be a fully formed question."
         ),]
 
         prompt = ChatPromptTemplate.from_messages(
             [
-                ("system", system),
+                ("system", SYSTEM_PROMPT_TEMPLATE),
                 MessagesPlaceholder("chat_history", optional=True),
-                ("human", human),
+                ("human", HUMAN_PROMPT_TEMPLATE),
                 MessagesPlaceholder("agent_scratchpad"),
             ]
         )
-        memory = ConversationBufferMemory(memory_key="chat_history")
+        # prompt = ChatPromptTemplate.from_messages([
+        # SystemMessagePromptTemplate.from_template(
+        #     input_variables=['tools'],
+        #     template=SYSTEM_PROMPT_TEMPLATE
+        # ),
+        # MessagesPlaceholder(variable_name='mrkl_chat_history', optional=True),
+        # HumanMessagePromptTemplate.from_template(
+        #     input_variables=["input", "mrkl_chat_history", "agent_scratchpad"],
+        #     template=HUMAN_PROMPT_TEMPLATE
+        # )
+        # ])
+        memory = ConversationBufferMemory(memory_key="mrkl_chat_history")
         agent = create_json_chat_agent(
         tools = tools,
-        llm = mistral_model_custom,
+        llm = self._llm,
         prompt = prompt,
         stop_sequence = ["STOP"],
         template_tool_response = "{observation}"
         )
-        self.agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, memory=memory, handle_parsing_errors=True)
+        self.agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True)
         
