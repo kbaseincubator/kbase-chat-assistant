@@ -4,7 +4,7 @@ from kbasechatassistant.assistant.chatbot import KBaseChatBot
 from kbasechatassistant.assistant.prompts import MRKL_PROMPT
 from langchain_core.language_models.llms import LLM
 from kbasechatassistant.tools.ragchain import create_ret_chain
-from kbasechatassistant.embeddings.embeddings import DEFAULT_CATALOG_DB_DIR, DEFAULT_DOCS_DB_DIR
+from kbasechatassistant.embeddings.embeddings import DEFAULT_TUTORIAL_DB_DIR, DEFAULT_DOCS_DB_DIR
 from langchain.agents import initialize_agent, Tool, AgentExecutor, load_tools, AgentType, create_react_agent
 from kbasechatassistant.tools.information_tool import InformationTool
 from langchain.agents.format_scratchpad import format_to_openai_function_messages
@@ -14,16 +14,47 @@ from langchain.agents.output_parsers import OpenAIFunctionsAgentOutputParser
 from langchain.tools import tool
 from kbasechatassistant.util.neo4j_config import Neo4jConfig
 from langchain.memory import ConversationBufferMemory
+from pathlib import Path
 
 class MRKL_bot(KBaseChatBot):
     _openai_key: str
-
-    def __init__(self:"MRKL_bot", llm: LLM, openai_api_key: str = None, neo4j_conf: Neo4jConfig = None) -> None:
+    _docs_db_dir: Path
+    _tutorial_db_dir:Path
+    def __init__(self:"MRKL_bot", llm: LLM, openai_api_key: str = None, neo4j_conf: Neo4jConfig = None, docs_db_dir: Path | str = None, tutorial_db_dir: Path | str = None) -> None:
         super().__init__(llm)
         self.__setup_openai_api_key(openai_api_key)
         self.__setup_neo4j(neo4j_conf)
+
+        if tutorial_db_dir is not None:
+            self._tutorial_db_dir = Path(tutorial_db_dir)
+        else:
+            self._tutorial_db_dir = DEFAULT_TUTORIAL_DB_DIR
+        if docs_db_dir is not None:
+            self._docs_db_dir = Path(docs_db_dir)
+        else:
+            self._docs_db_dir = DEFAULT_DOCS_DB_DIR
+
+        for db_path in [self._tutorial_db_dir, self._docs_db_dir]:
+            self.__check_db_directories(db_path)
         self.__init_mrkl()
         
+    def __check_db_directories(self, db_path: Path) -> None:
+        """
+        Checks for presence of the expected database directory by checking for chroma.sqlite3 file 
+        """
+        if not db_path.exists():
+            raise RuntimeError(
+                f"Database directory {db_path} not found, unable to make Agent."
+            )
+        if not db_path.is_dir():
+            raise RuntimeError(
+                f"Database directory {db_path} is not a directory, unable to make Agent."
+            )
+        db_file = db_path / "chroma.sqlite3"
+        if not db_file.exists():
+            raise RuntimeError(
+                f"Database file {db_file} not found, unable to make Agent."
+            )   
 
     def __setup_openai_api_key(self, openai_api_key: str) -> None:
         if openai_api_key is not None:
@@ -50,6 +81,8 @@ class MRKL_bot(KBaseChatBot):
           #Create tools here
           #Get the prompts 
         doc_chain = create_ret_chain(llm = self._llm, openai_key = self._openai_key, persist_directory = DEFAULT_DOCS_DB_DIR )
+        tutorial_chain = create_ret_chain(llm = self._llm, openai_key = self._openai_key, persist_directory = DEFAULT_TUTORIAL_DB_DIR )
+
         @tool("KG retrieval tool", return_direct=True)   
         def KGretrieval_tool(input: str):
            """This tool has the KBase app Knowledge Graph. Useful for when you need to confirm the existance of KBase applications and their tooltip, version, category and data objects.
@@ -64,17 +97,19 @@ class MRKL_bot(KBaseChatBot):
             func=doc_chain.run,
             description="This tool has the KBase documentation. Useful for when you need to find KBase applications to use for user tasks and how to use them. Input should be a fully formed question."
         ),
+        Tool.from_function 
+        (
+            name="KBase Tutorials",
+            func=tutorial_chain.run,
+            description="This has the tutorial narratives. Useful for when you need to answer questions about using the KBase platform, apps, and features for establishing a workflow to acheive a scientific goal. Input should be a fully formed question."
+        ),
         KGretrieval_tool]
         memory = ConversationBufferMemory(memory_key="mrkl_chat_history",return_messages=True)
         agent = create_react_agent(llm = self._llm, tools = tools, prompt = MRKL_PROMPT)
     
         # Create an agent executor by passing in the agent and tools
         self.agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, memory = memory, handle_parsing_errors=True)
-        # SUFFIX = """Provide the final answer and terminate the chain of thought once you have an answer. Begin! 
 
-        # Question: {input}
-        # Thought:{agent_scratchpad}"""
-        # self.agent = initialize_agent(tools, self._llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True, handle_parsing_errors=True, agent_kwargs={'suffix':SUFFIX})
     
     def _create_KG_agent(self):
         
