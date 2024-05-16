@@ -5,8 +5,8 @@ from langchain_openai import OpenAIEmbeddings
 from pathlib import Path
 from langchain_community.vectorstores import Chroma
 from langchain.memory import ReadOnlySharedMemory, ConversationBufferMemory
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain import PromptTemplate
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_core.prompts import PromptTemplate
 
 def create_ret_chain(llm: LLM, openai_key: str, persist_directory: str | Path) -> RetrievalQA:
     # Embedding functions to use
