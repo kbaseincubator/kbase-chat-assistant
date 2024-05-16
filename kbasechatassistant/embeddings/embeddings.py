@@ -10,12 +10,23 @@ HF_DOCS_DB_DIR: Path = Path(__file__).parent / "HFvector_db_kbase_docs"
 from langchain_openai import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
-from langchain.document_loaders import JSONLoader, DirectoryLoader
+from langchain.document_loaders import JSONLoader, DirectoryLoader, UnstructuredHTMLLoader
 
-def create_embeddings(input_directory, output_directory, embeddings_function = OpenAIEmbeddings):
-    # Load data from the specified directory
-    json_dir_loader = DirectoryLoader(input_directory, glob="**/[!.]*.json", loader_cls=JSONLoader, loader_kwargs={"jq_schema" : ".[]", "text_content" : False})
-    data = json_dir_loader.load()
+def create_embeddings(input_directory : str | Path, output_directory: str, doc_type:str, embeddings_function = OpenAIEmbeddings):
+
+    if doc_type is None:
+        raise ValueError("Please provide a document type.")
+
+    if doc_type == "json":
+        # Load data from the specified directory
+        json_dir_loader = DirectoryLoader(input_directory, glob="**/[!.]*.json", loader_cls=JSONLoader, loader_kwargs={"jq_schema" : ".[]", "text_content" : False})
+        data = json_dir_loader.load()
+    elif doc_type == "html":
+        html_dir_loader = DirectoryLoader(input_directory, glob="**/[!.]*.html", loader_cls=UnstructuredHTMLLoader)
+        data = html_dir_loader.load()
+    else:
+        raise ValueError(f"Unsupported document type: {doc_type}")
+
     
     # Split text into chunks for processing
     text_splitter = RecursiveCharacterTextSplitter(
