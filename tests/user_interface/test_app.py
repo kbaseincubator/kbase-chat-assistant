@@ -21,14 +21,14 @@ class MockMistralMRKLBot(MockMRKLBot):
     pass
 
 @patch("streamlit.image")  # Mocking the st.image function    
-def test_select_model():
+def test_select_model(mock_image):
     at = AppTest.from_file("../../kbasechatassistant/user_interface/app.py").run(timeout=100)
     # # Find the selectbox element by its label
     # No exceptions were rendered in the app output
     assert not at.exception
     
 @patch("streamlit.image")  # Mocking the st.image function
-def test_sidebar_elements():
+def test_sidebar_elements(mock_image):
     at = AppTest.from_file("../../kbasechatassistant/user_interface/app.py").run(timeout=100)
     at.sidebar.selectbox[0].select("gpt-4").run()
     assert not at.exception
