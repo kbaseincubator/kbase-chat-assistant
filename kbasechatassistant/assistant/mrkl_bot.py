@@ -73,7 +73,9 @@ class MRKL_bot(KBaseChatBot):
         def KGretrieval_tool(input: str):
            """This tool has the KBase app Knowledge Graph. Useful for when you need to confirm the existance of KBase applications and their tooltip, version, category and data objects.
            This tool can also be used for finding total number of apps or which data objects are shared between apps.
-           The input should always be a KBase app name or data object name and should not include any special characters or version number."""
+           The input should always be a KBase app name or data object name and should not include any special characters or version number.
+           Do not use this tool if you do not have an app or data object name to search with use the KBase Documentation or Tutorial tools instead
+           """
            return self._create_KG_agent().invoke({"input": input})['output']
             
         tools = [
