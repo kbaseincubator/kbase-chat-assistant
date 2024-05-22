@@ -19,16 +19,23 @@ class MockMRKLBot:
 
 class MockMistralMRKLBot(MockMRKLBot):
     pass
+def mock_load_gpt_agent(openai_api_key):
+    return MockMRKLBot()
 
+def mock_load_mistral_agent():
+    return MockMistralMRKLBot()
+@patch("kbasechatassistant.user_interface.app.load_gpt_agent", side_effect=mock_load_gpt_agent)
+@patch("kbasechatassistant.user_interface.app.load_mistral_agent", side_effect=mock_load_mistral_agent)
 @patch("streamlit.image")  # Mocking the st.image function    
-def test_select_model(mock_image):
+def test_select_model(mock_load_gpt, mock_load_mistral,mock_image):
     at = AppTest.from_file("../../kbasechatassistant/user_interface/app.py").run(timeout=100)
     # # Find the selectbox element by its label
     # No exceptions were rendered in the app output
     assert not at.exception
-    
+@patch("kbasechatassistant.user_interface.app.load_gpt_agent", side_effect=mock_load_gpt_agent)
+@patch("kbasechatassistant.user_interface.app.load_mistral_agent", side_effect=mock_load_mistral_agent)   
 @patch("streamlit.image")  # Mocking the st.image function
-def test_sidebar_elements(mock_image):
+def test_sidebar_elements(mock_load_gpt, mock_load_mistral,mock_image):
     at = AppTest.from_file("../../kbasechatassistant/user_interface/app.py").run(timeout=100)
     at.sidebar.selectbox[0].select("gpt-4").run()
     assert not at.exception
