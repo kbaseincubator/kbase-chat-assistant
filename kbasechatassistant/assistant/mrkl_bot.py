@@ -12,7 +12,6 @@ from langchain.tools.render import format_tool_to_openai_function
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.agents.output_parsers import OpenAIFunctionsAgentOutputParser
 from langchain.tools import tool
-from kbasechatassistant.util.neo4j_config import Neo4jConfig
 from langchain.memory import ConversationBufferMemory
 from pathlib import Path
 
@@ -20,10 +19,9 @@ class MRKL_bot(KBaseChatBot):
     _openai_key: str
     _docs_db_dir: Path
     _tutorial_db_dir:Path
-    def __init__(self:"MRKL_bot", llm: LLM, openai_api_key: str = None, neo4j_conf: Neo4jConfig = None, docs_db_dir: Path | str = None, tutorial_db_dir: Path | str = None) -> None:
+    def __init__(self:"MRKL_bot", llm: LLM, openai_api_key: str = None, docs_db_dir: Path | str = None, tutorial_db_dir: Path | str = None) -> None:
         super().__init__(llm)
         self.__setup_openai_api_key(openai_api_key)
-        self.__setup_neo4j(neo4j_conf)
 
         if tutorial_db_dir is not None:
             self._tutorial_db_dir = Path(tutorial_db_dir)
@@ -63,18 +61,6 @@ class MRKL_bot(KBaseChatBot):
             self._openai_key = os.environ["OPENAI_API_KEY"]
         else:
             raise KeyError("Missing environment variable OPENAI_API_KEY")
-            
-    def __setup_neo4j(self, neo4j_conf: Neo4jConfig) -> None:
-        if neo4j_conf is not None:
-            self._uri = neo4j_conf.uri
-            self._username = neo4j_conf.username
-            self._password  = neo4j_conf.password
-        elif os.environ.get("NEO4J_URI") and os.environ.get("NEO4J_USERNAME") and os.environ.get("NEO4J_PASSWORD"):
-            self._uri = os.environ["NEO4J_URI"]
-            self._username = os.environ["NEO4J_USERNAME"]
-            self._password  = os.environ["NEO4J_PASSWORD"]
-        else:
-            raise KeyError("Missing environment variable for Neo4j")
     
         
     def __init_mrkl(self: "MRKL_bot") -> None:
@@ -87,7 +73,9 @@ class MRKL_bot(KBaseChatBot):
         def KGretrieval_tool(input: str):
            """This tool has the KBase app Knowledge Graph. Useful for when you need to confirm the existance of KBase applications and their tooltip, version, category and data objects.
            This tool can also be used for finding total number of apps or which data objects are shared between apps.
-           The input should always be a KBase app name or data object name and should not include any special characters or version number."""
+           The input should always be a KBase app name or data object name and should not include any special characters or version number.
+           Do not use this tool if you do not have an app or data object name to search with use the KBase Documentation or Tutorial tools instead
+           """
            return self._create_KG_agent().invoke({"input": input})['output']
             
         tools = [

@@ -9,6 +9,9 @@ __pycache__/
 # Jupyter Notebook
 .ipynb_checkpoints
 
+# Some Test files 
+tests/*v1.py
+
 # Some Model files 
 kbasechatassistant/models/*v1.py
 

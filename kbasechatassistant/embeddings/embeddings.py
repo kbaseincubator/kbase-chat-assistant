@@ -9,8 +9,8 @@ HF_DOCS_DB_DIR: Path = Path(__file__).parent / "HFvector_db_kbase_docs"
 
 from langchain_openai import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import Chroma
-from langchain.document_loaders import JSONLoader, DirectoryLoader, UnstructuredHTMLLoader
+from langchain_community.vectorstores import Chroma
+from langchain_community.document_loaders import JSONLoader, DirectoryLoader, UnstructuredHTMLLoader
 
 def create_embeddings(input_directory : str | Path, output_directory: str, doc_type:str, embeddings_function = OpenAIEmbeddings):
 
