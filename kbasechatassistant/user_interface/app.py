@@ -13,7 +13,7 @@ from langchain_core.runnables import RunnableConfig
 
 def load_gpt_agent(openai_api_key):
     llm = ChatOpenAI(temperature=0, model="gpt-4", openai_api_key=openai_api_key)
-    return MRKL_bot(llm=llm)
+    return MRKL_bot(llm=llm, openai_api_key=openai_api_key)
 
 def load_mistral_agent():
     name = "Mistral-7B-Instruct-v0.2"
