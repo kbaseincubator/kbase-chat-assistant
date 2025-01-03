@@ -7,6 +7,8 @@ from langchain_community.vectorstores import Chroma
 from langchain.memory import ReadOnlySharedMemory, ConversationBufferMemory
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.prompts import PromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
 
 def create_ret_chain(llm: LLM, openai_key: str, persist_directory: str | Path) -> RetrievalQA:
     # Embedding functions to use
@@ -100,3 +102,35 @@ def create_mistral_ret_chain(llm, persist_directory: str | Path) -> RetrievalQA:
         #chain_type_kwargs={"prompt": prompt}
     )
     return qa_chain
+
+
+def create_llama_ret_chain(llm, persist_directory: str | Path) -> RetrievalQA:
+    
+    
+    # Prompt
+    prompt = PromptTemplate(
+    template="""<|begin_of_text|><|start_header_id|>system<|end_header_id|> You are an assistant for question-answering tasks. 
+    Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. 
+    Use three sentences maximum and keep the answer concise <|eot_id|><|start_header_id|>user<|end_header_id|>
+    Question: {question} 
+    Context: {context} 
+    Answer: <|eot_id|><|start_header_id|>assistant<|end_header_id|>""",
+    input_variables=["question", "document"],
+    )
+
+    # Embedding functions to use
+    HFembeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    # Use the persisted database
+    vectordb = Chroma(
+        persist_directory=str(persist_directory), embedding_function=HFembeddings
+    )
+    retriever = vectordb.as_retriever()
+    
+    rag_chain = (
+        {"context": retriever,  "question": RunnablePassthrough()}
+        | prompt
+        | llm
+        | StrOutputParser()
+    )
+    
+    return rag_chain

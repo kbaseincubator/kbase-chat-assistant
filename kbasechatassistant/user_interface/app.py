@@ -1,6 +1,7 @@
 import streamlit as st
 from kbasechatassistant.assistant.mrkl_bot import MRKL_bot
 from kbasechatassistant.assistant.mistral_mrkl_bot import Mistral_MRKL_bot
+from kbasechatassistant.assistant.llama3_mrkl_bot import Llama3_MRKL_bot
 from kbasechatassistant.models.CustomMistral import CustomLLMMistral
 from transformers import AutoModelForCausalLM, pipeline, AutoTokenizer
 from pathlib import Path
@@ -10,6 +11,21 @@ import os
 from kbasechatassistant.util.stream_handler import StreamHandler
 from langchain_community.callbacks import StreamlitCallbackHandler
 from langchain_core.runnables import RunnableConfig
+
+def load_cborg_llama_agent(cborg_api_key):
+    llm = ChatOpenAI(
+    model="lbl/llama",
+    api_key=cborg_api_key,
+    base_url="https://api.cborg.lbl.gov"  
+    )
+    return Llama3_MRKL_bot(llm=llm)
+def load_cborg_gpt_agent(cborg_api_key):
+    llm = ChatOpenAI(
+    model="openai/gpt-4o",
+    api_key=cborg_api_key,
+    base_url="https://api.cborg.lbl.gov"  
+    )
+    return MRKL_bot(llm=llm)
 
 def load_gpt_agent(openai_api_key):
     llm = ChatOpenAI(temperature=0, model="gpt-4", openai_api_key=openai_api_key)
@@ -33,30 +49,48 @@ def main():
     st.title('KBase Research Assistant')
     
     with st.sidebar:
-        model_choice = st.selectbox("Choose a Model", ["gpt-4", "Mistral-7B-Instruct-v0.2"])
-        api_key = None
+        model_choice = st.selectbox("Choose a Model", ["gpt-4", "Mistral-7B-Instruct-v0.2", "CBORG GPT", "CBORG Llama"])
+        OPENAI_API_KEY = None
+        CBORG_API_KEY = None
+
         if model_choice == "gpt-4":
             OPENAI_API_KEY = st.text_input("OpenAI API Key", type="password")
             if not OPENAI_API_KEY:
                 st.error("Please enter your OpenAI key")
-        
+        if model_choice in ["CBORG GPT", "CBORG Llama"]:
+            CBORG_API_KEY = st.text_input("CBORG API Key", type="password")
+            if not CBORG_API_KEY:
+                st.error("Please enter your CBORG API key")
+                
         submit_button = st.button("Submit")
+        
         if submit_button:
             if model_choice == "gpt-4" and not OPENAI_API_KEY:
                 st.error("Please provide an OpenAI API key and hit the submit button")
                 return
-
+            if model_choice in ["CBORG GPT", "CBORG Llama"] and not CBORG_API_KEY:
+                st.error("Please provide a CBORG API key and hit the submit button")
+                return
+                
             if 'agent' not in st.session_state:
                 if model_choice == "gpt-4":
                     st.session_state["agent"] = load_gpt_agent(OPENAI_API_KEY)
                     print(st.session_state["agent"])
                 elif model_choice == "Mistral-7B-Instruct-v0.2":
-                    st.session_state["agent"] = load_mistral_agent()
+                    st.session_state["agent"] = load_mistral_agent
+                elif model_choice == "CBORG GPT":
+                    st.session_state["agent"] = load_cborg_gpt_agent(CBORG_API_KEY)
+                elif model_choice == "CBORG Llama": 
+                    st.session_state["agent"] = load_cborg_llama_agent(CBORG_API_KEY)
             else:
                 if model_choice == "gpt-4" and not isinstance(st.session_state["agent"], MRKL_bot):
                     st.session_state["agent"] = load_gpt_agent()
                 elif model_choice == "Mistral-7B-Instruct-v0.2" and not isinstance(st.session_state["agent"], Mistral_MRKL_bot):
                     st.session_state["agent"] = load_mistral_agent()
+                elif model_choice == "CBORG GPT" and not isinstance(st.session_state["agent"], MRKL_bot):
+                    st.session_state["agent"] = load_cborg_gpt_agent(CBORG_API_KEY)
+                elif model_choice == "CBORG Llama" and not isinstance(st.session_state["agent"], Llama3_MRKL_bot):
+                    st.session_state["agent"] = load_cborg_llama_agent(CBORG_API_KEY)
     
     # Initialize chat history
     if "messages" not in st.session_state:
