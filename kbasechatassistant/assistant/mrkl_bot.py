@@ -90,8 +90,8 @@ class MRKL_bot(KBaseChatBot):
             name="KBase Tutorials",
             func=tutorial_chain.run,
             description="This has the tutorial narratives. Useful for when you need to answer questions about using the KBase platform, apps, and features for establishing a workflow to acheive a scientific goal. Input should be a fully formed question."
-        ),
-        KGretrieval_tool]
+        ),]
+        #KGretrieval_tool]
         memory = ConversationBufferMemory(memory_key="mrkl_chat_history",return_messages=True)
         agent = create_react_agent(llm = self._llm, tools = tools, prompt = MRKL_PROMPT)
     
