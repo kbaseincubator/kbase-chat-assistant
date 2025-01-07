@@ -1,5 +1,6 @@
 import streamlit as st
 from kbasechatassistant.assistant.mrkl_bot import MRKL_bot
+from kbasechatassistant.assistant.mrkl_bot_cborg import MRKL_bot_cborg
 from kbasechatassistant.assistant.mistral_mrkl_bot import Mistral_MRKL_bot
 from kbasechatassistant.assistant.llama3_mrkl_bot import Llama3_MRKL_bot
 from kbasechatassistant.models.CustomMistral import CustomLLMMistral
@@ -25,7 +26,7 @@ def load_cborg_gpt_agent(cborg_api_key):
     api_key=cborg_api_key,
     base_url="https://api.cborg.lbl.gov"  
     )
-    return MRKL_bot(llm=llm)
+    return MRKL_bot_cborg(llm=llm,cborg_api_key=cborg_api_key)
 
 def load_gpt_agent(openai_api_key):
     llm = ChatOpenAI(temperature=0, model="gpt-4", openai_api_key=openai_api_key)
@@ -80,14 +81,16 @@ def main():
                     st.session_state["agent"] = load_mistral_agent
                 elif model_choice == "CBORG GPT":
                     st.session_state["agent"] = load_cborg_gpt_agent(CBORG_API_KEY)
+                    print("cborg gpt agent loaded")
                 elif model_choice == "CBORG Llama": 
                     st.session_state["agent"] = load_cborg_llama_agent(CBORG_API_KEY)
+                    print("cborg llama agent loaded")
             else:
                 if model_choice == "gpt-4" and not isinstance(st.session_state["agent"], MRKL_bot):
                     st.session_state["agent"] = load_gpt_agent()
                 elif model_choice == "Mistral-7B-Instruct-v0.2" and not isinstance(st.session_state["agent"], Mistral_MRKL_bot):
                     st.session_state["agent"] = load_mistral_agent()
-                elif model_choice == "CBORG GPT" and not isinstance(st.session_state["agent"], MRKL_bot):
+                elif model_choice == "CBORG GPT" and not isinstance(st.session_state["agent"], MRKL_bot_cborg):
                     st.session_state["agent"] = load_cborg_gpt_agent(CBORG_API_KEY)
                 elif model_choice == "CBORG Llama" and not isinstance(st.session_state["agent"], Llama3_MRKL_bot):
                     st.session_state["agent"] = load_cborg_llama_agent(CBORG_API_KEY)

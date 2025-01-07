@@ -16,7 +16,10 @@ ENV PATH="/root/.local/bin:$PATH" \
 COPY pyproject.toml poetry.lock ./
 
 # Install dependencies
-RUN poetry install --without dev --no-root && \
+RUN apt-get update && apt-get install -y build-essential python3-dev
+RUN pip install --upgrade pip
+RUN pip install psutil==5.9.8
+RUN poetry install && \
     rm -rf ${POETRY_CACHE_DIR}
 
 # Copy the rest of the application code into the container

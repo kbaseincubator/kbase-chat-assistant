@@ -10,12 +10,34 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 
+#Retrieval chain with openai embeddings, requires openai key
 def create_ret_chain(llm: LLM, openai_key: str, persist_directory: str | Path) -> RetrievalQA:
     # Embedding functions to use
     embeddings = OpenAIEmbeddings(openai_api_key = openai_key)
     # Use the persisted database
     vectordb = Chroma(
         persist_directory=str(persist_directory), embedding_function=embeddings
+    )
+    retriever = vectordb.as_retriever()
+    memory = ConversationBufferMemory(memory_key="chat_history")
+    readonlymemory = ReadOnlySharedMemory(memory=memory)
+    chain_type = "refine"
+
+    # Retrieval chain
+    qa_chain = RetrievalQA.from_chain_type(
+        llm = llm,
+        chain_type = chain_type,
+        retriever = retriever,
+        memory = readonlymemory,
+    )
+    return qa_chain
+#For cborg use HF or Nomic embeddings, no openai key required
+def create_ret_chain_cborg(llm: LLM, persist_directory: str | Path) -> RetrievalQA:
+    # Embedding functions to use
+    HFembeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    # Use the persisted database
+    vectordb = Chroma(
+        persist_directory=str(persist_directory), embedding_function=HFembeddings
     )
     retriever = vectordb.as_retriever()
     memory = ConversationBufferMemory(memory_key="chat_history")
