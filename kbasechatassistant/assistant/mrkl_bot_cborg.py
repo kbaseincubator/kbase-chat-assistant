@@ -1,10 +1,12 @@
 import sys
 import os
+from langchain_openai import OpenAIEmbeddings
 from kbasechatassistant.assistant.chatbot import KBaseChatBot
 from kbasechatassistant.assistant.prompts import MRKL_PROMPT
 from langchain_core.language_models.llms import LLM
 from kbasechatassistant.tools.ragchain import create_ret_chain_cborg
-from kbasechatassistant.embeddings.embeddings import HF_CATALOG_DB_DIR, HF_DOCS_DB_DIR
+#from kbasechatassistant.embeddings.embeddings import HF_CATALOG_DB_DIR, HF_DOCS_DB_DIR, HF_TUTORIALS_DB_DIR
+from kbasechatassistant.embeddings.embeddings import NOMIC_CATALOG_DB_DIR, NOMIC_DOCS_DB_DIR, NOMIC_TUTORIALS_DB_DIR
 from langchain.agents import initialize_agent, Tool, AgentExecutor, load_tools, AgentType, create_react_agent
 from kbasechatassistant.tools.information_tool import InformationTool
 from langchain.agents.format_scratchpad import format_to_openai_function_messages
@@ -16,23 +18,22 @@ from langchain.memory import ConversationBufferMemory
 from pathlib import Path
 
 class MRKL_bot_cborg(KBaseChatBot):
-    _openai_key: str
     _docs_db_dir: Path
     _tutorial_db_dir:Path
     def __init__(self:"MRKL_bot_cborg", llm: LLM, cborg_api_key: str = None, docs_db_dir: Path | str = None, tutorial_db_dir: Path | str = None) -> None:
         super().__init__(llm)
         self.__setup_cborg_api_key(cborg_api_key)
 
-        # if tutorial_db_dir is not None:
-        #     self._tutorial_db_dir = Path(tutorial_db_dir)
-        # else:
-        #     self._tutorial_db_dir = DEFAULT_TUTORIAL_DB_DIR
+        if tutorial_db_dir is not None:
+            self._tutorial_db_dir = Path(tutorial_db_dir)
+        else:
+            self._tutorial_db_dir = NOMIC_TUTORIALS_DB_DIR
         if docs_db_dir is not None:
             self._docs_db_dir = Path(docs_db_dir)
         else:
-            self._docs_db_dir = HF_DOCS_DB_DIR
+            self._docs_db_dir = NOMIC_DOCS_DB_DIR
 
-        for db_path in [self._docs_db_dir]:#[self._tutorial_db_dir, self._docs_db_dir]:
+        for db_path in [self._tutorial_db_dir, self._docs_db_dir]:
             self.__check_db_directories(db_path)
         self.__init_mrkl()
         
@@ -66,8 +67,10 @@ class MRKL_bot_cborg(KBaseChatBot):
     def __init_mrkl(self: "MRKL_bot_cborg") -> None:
           #Create tools here
           #Get the prompts 
-        doc_chain = create_ret_chain_cborg(llm = self._llm, persist_directory = HF_DOCS_DB_DIR)
-        #tutorial_chain = create_ret_chain(llm = self._llm, openai_key = self._openai_key, persist_directory = DEFAULT_TUTORIAL_DB_DIR )
+        embeddings = OpenAIEmbeddings(openai_api_key=self._cborg_key, 
+                                      openai_api_base="https://api.cborg.lbl.gov/v1", model="lbl/nomic-embed-text")
+        doc_chain = create_ret_chain_cborg(llm = self._llm,embeddings_func=embeddings, persist_directory = NOMIC_DOCS_DB_DIR)
+        tutorial_chain = create_ret_chain_cborg(llm = self._llm,embeddings_func=embeddings, persist_directory = NOMIC_TUTORIALS_DB_DIR)
 
         @tool("KG retrieval tool", return_direct=True)   
         def KGretrieval_tool(input: str):
@@ -83,16 +86,15 @@ class MRKL_bot_cborg(KBaseChatBot):
         (
             name="KBase Documentation",
             func=doc_chain.run,
-            description="This tool has the KBase documentation. Useful for when you need to find KBase applications to use for user tasks and how to use them. Input should be a fully formed question."
+            description="This tool has the KBase documentation. This tool should be the first place to check anything related to KBase and its apps. Use this for making app recommendations. Useful for when you need to find KBase applications to use for user tasks and how to use them. Input should be a fully formed question."
         ),
-        # Tool.from_function 
-        # (
-        #     name="KBase Tutorials",
-        #     func=tutorial_chain.run,
-        #     description="This has the tutorial narratives. Useful for when you need to answer questions about using the KBase platform, apps, and features for establishing a workflow to acheive a scientific goal. Input should be a fully formed question."
-        # ),
-        ]
-        #KGretrieval_tool]
+        Tool.from_function 
+        (
+            name="KBase Tutorials",
+            func=tutorial_chain.run,
+            description="This has the tutorial narratives. Useful for when you need to answer questions about using the KBase platform, apps, and features for establishing a workflow to acheive a scientific goal. Input should be a fully formed question."
+        ),
+        KGretrieval_tool]
         memory = ConversationBufferMemory(memory_key="mrkl_chat_history",return_messages=True)
         agent = create_react_agent(llm = self._llm, tools = tools, prompt = MRKL_PROMPT)
     
@@ -111,9 +113,7 @@ class MRKL_bot_cborg(KBaseChatBot):
                 (
                     "system",
                     "You are a helpful tool that finds information about KBase applications in the Knowledge Graph "
-                    " and recommends them. Use the tools provided to you to find KBase apps and related properties.  If tools require follow up questions, "
-                    "make sure to ask the user for clarification. Make sure to include any "
-                    "available options that need to be clarified in the follow up questions "
+                    "Use the tools provided to you to find KBase apps and related properties."
                     "Do only the things the user specifically requested. ",
                 ),
                 MessagesPlaceholder(variable_name="chat_history"),

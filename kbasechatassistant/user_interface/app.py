@@ -19,7 +19,7 @@ def load_cborg_llama_agent(cborg_api_key):
     api_key=cborg_api_key,
     base_url="https://api.cborg.lbl.gov"  
     )
-    return Llama3_MRKL_bot(llm=llm)
+    return Llama3_MRKL_bot(llm=llm,cborg_api_key=cborg_api_key)
 def load_cborg_gpt_agent(cborg_api_key):
     llm = ChatOpenAI(
     model="openai/gpt-4o",

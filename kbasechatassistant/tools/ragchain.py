@@ -10,6 +10,8 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 
+#HF_EMBEDDING_MODEL_PATH: Path = Path("/Users/prachigupta/LLM/kbase-chat-assistant/embedding_models/models--sentence-transformers--all-MiniLM-L6-v2/snapshots/MiniLM-L6-v2")
+#HF_EMBEDDING_MODEL_PATH: Path = Path("/app/embedding_models/MiniLM-L6-v2")
 #Retrieval chain with openai embeddings, requires openai key
 def create_ret_chain(llm: LLM, openai_key: str, persist_directory: str | Path) -> RetrievalQA:
     # Embedding functions to use
@@ -32,12 +34,12 @@ def create_ret_chain(llm: LLM, openai_key: str, persist_directory: str | Path) -
     )
     return qa_chain
 #For cborg use HF or Nomic embeddings, no openai key required
-def create_ret_chain_cborg(llm: LLM, persist_directory: str | Path) -> RetrievalQA:
+def create_ret_chain_cborg(llm: LLM,embeddings_func, persist_directory: str | Path) -> RetrievalQA:
     # Embedding functions to use
-    HFembeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    #HFembeddings = HuggingFaceEmbeddings(model_name=str(HF_EMBEDDING_MODEL_PATH))
     # Use the persisted database
     vectordb = Chroma(
-        persist_directory=str(persist_directory), embedding_function=HFembeddings
+        persist_directory=str(persist_directory), embedding_function=embeddings_func
     )
     retriever = vectordb.as_retriever()
     memory = ConversationBufferMemory(memory_key="chat_history")
@@ -126,7 +128,7 @@ def create_mistral_ret_chain(llm, persist_directory: str | Path) -> RetrievalQA:
     return qa_chain
 
 
-def create_llama_ret_chain(llm, persist_directory: str | Path) -> RetrievalQA:
+def create_llama_ret_chain(llm : LLM,embeddings_func, persist_directory: str | Path) -> RetrievalQA:
     
     
     # Prompt
@@ -141,10 +143,11 @@ def create_llama_ret_chain(llm, persist_directory: str | Path) -> RetrievalQA:
     )
 
     # Embedding functions to use
-    HFembeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    #HFembeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+
     # Use the persisted database
     vectordb = Chroma(
-        persist_directory=str(persist_directory), embedding_function=HFembeddings
+        persist_directory=str(persist_directory), embedding_function=embeddings_func
     )
     retriever = vectordb.as_retriever()
     
