@@ -25,6 +25,9 @@ RUN poetry install && \
 # Copy the rest of the application code into the container
 COPY . .
 
+# Copy the MiniLM-L6-v2 model directory into the container
+#COPY embedding_models/models--sentence-transformers--all-MiniLM-L6-v2/snapshots/MiniLM-L6-v2 /app/embedding_models/MiniLM-L6-v2
+
 # Set the PYTHONPATH environment variable
 ENV PYTHONPATH=/app
 
