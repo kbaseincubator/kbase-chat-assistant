@@ -1,7 +1,7 @@
 import sys
 import os
 from kbasechatassistant.assistant.chatbot import KBaseChatBot
-from kbasechatassistant.assistant.prompts import MRKL_PROMPT
+from kbasechatassistant.assistant.prompts import DEFAULT_SYSTEM_PROMPT_TEMPLATE, create_mrkl_prompt
 from langchain_core.language_models.llms import LLM
 from kbasechatassistant.tools.ragchain import create_ret_chain
 from kbasechatassistant.embeddings.embeddings import DEFAULT_TUTORIAL_DB_DIR, DEFAULT_DOCS_DB_DIR
@@ -19,10 +19,10 @@ class MRKL_bot(KBaseChatBot):
     _openai_key: str
     _docs_db_dir: Path
     _tutorial_db_dir:Path
-    def __init__(self:"MRKL_bot", llm: LLM, openai_api_key: str = None, docs_db_dir: Path | str = None, tutorial_db_dir: Path | str = None) -> None:
+    def __init__(self:"MRKL_bot", llm: LLM, system_prompt_template: str = None, openai_api_key: str = None, docs_db_dir: Path | str = None, tutorial_db_dir: Path | str = None) -> None:
         super().__init__(llm)
         self.__setup_openai_api_key(openai_api_key)
-
+        self._system_prompt_template = system_prompt_template or DEFAULT_SYSTEM_PROMPT_TEMPLATE
         if tutorial_db_dir is not None:
             self._tutorial_db_dir = Path(tutorial_db_dir)
         else:
@@ -92,8 +92,9 @@ class MRKL_bot(KBaseChatBot):
             description="This has the tutorial narratives. Useful for when you need to answer questions about using the KBase platform, apps, and features for establishing a workflow to acheive a scientific goal. Input should be a fully formed question."
         ),]
         #KGretrieval_tool]
+        prompt = create_mrkl_prompt(system_prompt_template=self._system_prompt_template)
         memory = ConversationBufferMemory(memory_key="mrkl_chat_history",return_messages=True)
-        agent = create_react_agent(llm = self._llm, tools = tools, prompt = MRKL_PROMPT)
+        agent = create_react_agent(llm = self._llm, tools = tools, prompt = prompt)
     
         # Create an agent executor by passing in the agent and tools
         self.agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, memory = memory, handle_parsing_errors=True)

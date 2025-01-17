@@ -6,7 +6,7 @@ from langchain.callbacks.manager import (
 )
 
 # Import things that are needed generically
-from langchain.pydantic_v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 from langchain.tools import BaseTool
 
 from kbasechatassistant.util.semantic import Semantic
@@ -52,8 +52,8 @@ class InformationInput(BaseModel):
 
 
 class InformationTool(BaseTool):
-    name = "Information"
-    description = (
+    name: str = "Information"
+    description: str = (
         "useful for when you need to answer questions about KBase apps"
     )
     args_schema: Type[BaseModel] = InformationInput

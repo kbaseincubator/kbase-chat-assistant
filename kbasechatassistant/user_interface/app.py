@@ -20,13 +20,20 @@ def load_cborg_llama_agent(cborg_api_key):
     base_url="https://api.cborg.lbl.gov"  
     )
     return Llama3_MRKL_bot(llm=llm,cborg_api_key=cborg_api_key)
-def load_cborg_gpt_agent(cborg_api_key):
+def load_cborg_gpt_agent(cborg_api_key,system_prompt):
     llm = ChatOpenAI(
     model="openai/gpt-4o",
     api_key=cborg_api_key,
     base_url="https://api.cborg.lbl.gov"  
     )
-    return MRKL_bot_cborg(llm=llm,cborg_api_key=cborg_api_key)
+    return MRKL_bot_cborg(llm=llm,system_prompt_template=system_prompt, cborg_api_key=cborg_api_key)
+def load_cborg_anthropic_agent(cborg_api_key,system_prompt):
+    llm = ChatOpenAI(
+    model="anthropic/claude-sonnet",
+    api_key=cborg_api_key,
+    base_url="https://api.cborg.lbl.gov"  
+    )
+    return MRKL_bot_cborg(llm=llm,system_prompt_template=system_prompt,cborg_api_key=cborg_api_key)
 
 def load_gpt_agent(openai_api_key):
     llm = ChatOpenAI(temperature=0, model="gpt-4", openai_api_key=openai_api_key)
@@ -48,9 +55,13 @@ def main():
     st.image(image, width=400)
     # App title
     st.title('KBase Research Assistant')
-    
+    # User inputs for system prompt
+    user_system_prompt = st.text_area("System Prompt", value="""You are a helpful assistant designed to assist with KBase tasks. Use the tools and information provided to answer user questions accurately and concisely.
+    """, height=200)
     with st.sidebar:
-        model_choice = st.selectbox("Choose a Model", ["gpt-4", "Mistral-7B-Instruct-v0.2", "CBORG GPT", "CBORG Llama"])
+        if "current_model" in st.session_state:
+            st.markdown(f"**Active Model:** {st.session_state['current_model']}")
+        model_choice = st.selectbox("Choose a Model", ["gpt-4", "Mistral-7B-Instruct-v0.2", "CBORG GPT", "CBORG Llama","CBORG Anthropic" ])
         OPENAI_API_KEY = None
         CBORG_API_KEY = None
 
@@ -58,7 +69,7 @@ def main():
             OPENAI_API_KEY = st.text_input("OpenAI API Key", type="password")
             if not OPENAI_API_KEY:
                 st.error("Please enter your OpenAI key")
-        if model_choice in ["CBORG GPT", "CBORG Llama"]:
+        if model_choice in ["CBORG GPT", "CBORG Llama","CBORG Anthropic"]:
             CBORG_API_KEY = st.text_input("CBORG API Key", type="password")
             if not CBORG_API_KEY:
                 st.error("Please enter your CBORG API key")
@@ -66,34 +77,43 @@ def main():
         submit_button = st.button("Submit")
         
         if submit_button:
+             # Check if the model has changed
+            if "current_model" not in st.session_state or st.session_state["current_model"] != model_choice:
+                st.session_state["current_model"] = model_choice
+                st.success(f"Model switched to: {model_choice}")
             if model_choice == "gpt-4" and not OPENAI_API_KEY:
                 st.error("Please provide an OpenAI API key and hit the submit button")
                 return
-            if model_choice in ["CBORG GPT", "CBORG Llama"] and not CBORG_API_KEY:
+            if model_choice in ["CBORG GPT", "CBORG Llama", "CBORG Anthropic"] and not CBORG_API_KEY:
                 st.error("Please provide a CBORG API key and hit the submit button")
                 return
                 
-            if 'agent' not in st.session_state:
+            if 'agent' not in st.session_state or st.session_state["current_model"] != model_choice:
                 if model_choice == "gpt-4":
                     st.session_state["agent"] = load_gpt_agent(OPENAI_API_KEY)
                     print(st.session_state["agent"])
                 elif model_choice == "Mistral-7B-Instruct-v0.2":
                     st.session_state["agent"] = load_mistral_agent
                 elif model_choice == "CBORG GPT":
-                    st.session_state["agent"] = load_cborg_gpt_agent(CBORG_API_KEY)
+                    st.session_state["agent"] = load_cborg_gpt_agent(cborg_api_key=CBORG_API_KEY,system_prompt=user_system_prompt)
                     print("cborg gpt agent loaded")
                 elif model_choice == "CBORG Llama": 
                     st.session_state["agent"] = load_cborg_llama_agent(CBORG_API_KEY)
                     print("cborg llama agent loaded")
+                elif model_choice == "CBORG Anthropic": 
+                    st.session_state["agent"] = load_cborg_anthropic_agent(cborg_api_key=CBORG_API_KEY,system_prompt=user_system_prompt)
+                    print("cborg Anthropic agent loaded")
             else:
                 if model_choice == "gpt-4" and not isinstance(st.session_state["agent"], MRKL_bot):
-                    st.session_state["agent"] = load_gpt_agent()
+                    st.session_state["agent"] = load_gpt_agent(OPENAI_API_KEY)
                 elif model_choice == "Mistral-7B-Instruct-v0.2" and not isinstance(st.session_state["agent"], Mistral_MRKL_bot):
                     st.session_state["agent"] = load_mistral_agent()
                 elif model_choice == "CBORG GPT" and not isinstance(st.session_state["agent"], MRKL_bot_cborg):
-                    st.session_state["agent"] = load_cborg_gpt_agent(CBORG_API_KEY)
+                    st.session_state["agent"] = load_cborg_gpt_agent(system_prompt=user_system_prompt, cborg_api_key=CBORG_API_KEY)
                 elif model_choice == "CBORG Llama" and not isinstance(st.session_state["agent"], Llama3_MRKL_bot):
                     st.session_state["agent"] = load_cborg_llama_agent(CBORG_API_KEY)
+                elif model_choice == "CBORG Anthropic" and not isinstance(st.session_state["agent"], MRKL_bot_cborg):
+                    st.session_state["agent"] = load_cborg_anthropic_agent(system_prompt=user_system_prompt, cborg_api_key=CBORG_API_KEY)
     
     # Initialize chat history
     if "messages" not in st.session_state:
