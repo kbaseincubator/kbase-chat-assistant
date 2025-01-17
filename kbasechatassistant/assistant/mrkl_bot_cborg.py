@@ -2,12 +2,12 @@ import sys
 import os
 from langchain_openai import OpenAIEmbeddings
 from kbasechatassistant.assistant.chatbot import KBaseChatBot
-from kbasechatassistant.assistant.prompts import MRKL_PROMPT
+from kbasechatassistant.assistant.prompts import DEFAULT_SYSTEM_PROMPT_TEMPLATE, create_mrkl_prompt
 from langchain_core.language_models.llms import LLM
 from kbasechatassistant.tools.ragchain import create_ret_chain_cborg
 #from kbasechatassistant.embeddings.embeddings import HF_CATALOG_DB_DIR, HF_DOCS_DB_DIR, HF_TUTORIALS_DB_DIR
 from kbasechatassistant.embeddings.embeddings import NOMIC_CATALOG_DB_DIR, NOMIC_DOCS_DB_DIR, NOMIC_TUTORIALS_DB_DIR
-from langchain.agents import initialize_agent, Tool, AgentExecutor, load_tools, AgentType, create_react_agent
+from langchain.agents import initialize_agent, Tool, AgentExecutor, AgentType, create_react_agent
 from kbasechatassistant.tools.information_tool import InformationTool
 from langchain.agents.format_scratchpad import format_to_openai_function_messages
 from langchain.tools.render import format_tool_to_openai_function
@@ -20,9 +20,10 @@ from pathlib import Path
 class MRKL_bot_cborg(KBaseChatBot):
     _docs_db_dir: Path
     _tutorial_db_dir:Path
-    def __init__(self:"MRKL_bot_cborg", llm: LLM, cborg_api_key: str = None, docs_db_dir: Path | str = None, tutorial_db_dir: Path | str = None) -> None:
+    def __init__(self:"MRKL_bot_cborg", llm: LLM, system_prompt_template: str = None, cborg_api_key: str = None, docs_db_dir: Path | str = None, tutorial_db_dir: Path | str = None) -> None:
         super().__init__(llm)
         self.__setup_cborg_api_key(cborg_api_key)
+        self._system_prompt_template = system_prompt_template or DEFAULT_SYSTEM_PROMPT_TEMPLATE
 
         if tutorial_db_dir is not None:
             self._tutorial_db_dir = Path(tutorial_db_dir)
@@ -96,7 +97,9 @@ class MRKL_bot_cborg(KBaseChatBot):
         ),
         KGretrieval_tool]
         memory = ConversationBufferMemory(memory_key="mrkl_chat_history",return_messages=True)
-        agent = create_react_agent(llm = self._llm, tools = tools, prompt = MRKL_PROMPT)
+        prompt = create_mrkl_prompt(system_prompt_template=self._system_prompt_template)
+
+        agent = create_react_agent(llm = self._llm, tools = tools, prompt = prompt)
     
         # Create an agent executor by passing in the agent and tools
         self.agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, memory = memory, handle_parsing_errors=True)
