@@ -33,8 +33,10 @@ def create_mrkl_prompt(system_prompt_template: str = DEFAULT_SYSTEM_PROMPT_TEMPL
     Final Answer: the final answer to the original input question.
     Always follow these:
     -Stop after you arrive at the Final Answer. 
-    -Check your output and make sure it conforms! 
-    -Do not output an action and a final answer at the same time. 
+     
+    - Before proceeding, validate that your output conforms to the required format:
+        -Each `Thought:` must be followed by an `Action:` or lead to a `Final Answer:`.
+        -Never skip required fields or mix them together.
     -When suggesting apps to user for performing analysis make sure to review the associated meta data and select analysis steps or apps accordingly.
     -When generating detailed multi step analysis plans, be precise suggesting one app per step.
     -Make sure to make recommendations of apps that exist in KBase.

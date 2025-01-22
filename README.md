@@ -30,9 +30,9 @@ docker push registry.nersc.gov/kbase/kbase-chat-assistant
 7. On the far right, hit the 3-dots menu, then `Redeploy`
 8. It can take a while for the container to get the memo that it should shut down, so just let it go.
 
-## TODOs
+## Updates
+1. Updated KBase App Graph retrieval tool
+2. Improved prompts
 
-1. Add the Knowledge Graph
-2. User interface
 
 ![KBaseChatAssistant](chat_asst_screenshot.pdf)
