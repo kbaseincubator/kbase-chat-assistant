@@ -54,8 +54,8 @@ class Semantic:
         full_text_query = ""
         words = [el for el in self.remove_lucene_chars(input).split() if el]
         for word in words[:-1]:
-            full_text_query += f" {word}~0.8 AND"
-        full_text_query += f" {words[-1]}~0.8"
+            full_text_query += f" {word}~0.85 AND"
+        full_text_query += f" {words[-1]}~0.85"
         return full_text_query.strip()
     
     

@@ -7,7 +7,7 @@ from langchain_core.language_models.llms import LLM
 from kbasechatassistant.tools.ragchain import create_ret_chain_cborg
 #from kbasechatassistant.embeddings.embeddings import HF_CATALOG_DB_DIR, HF_DOCS_DB_DIR, HF_TUTORIALS_DB_DIR
 from kbasechatassistant.embeddings.embeddings import NOMIC_CATALOG_DB_DIR, NOMIC_DOCS_DB_DIR, NOMIC_TUTORIALS_DB_DIR
-from langchain.agents import initialize_agent, Tool, AgentExecutor, AgentType, create_react_agent
+from langchain.agents import Tool, AgentExecutor, create_react_agent, create_tool_calling_agent
 from kbasechatassistant.tools.information_tool import InformationTool
 from langchain.agents.format_scratchpad import format_to_openai_function_messages
 from langchain.tools.render import format_tool_to_openai_function
@@ -16,6 +16,7 @@ from langchain.agents.output_parsers import OpenAIFunctionsAgentOutputParser
 from langchain.tools import tool
 from langchain.memory import ConversationBufferMemory
 from pathlib import Path
+
 
 class MRKL_bot_cborg(KBaseChatBot):
     _docs_db_dir: Path
@@ -73,14 +74,19 @@ class MRKL_bot_cborg(KBaseChatBot):
         doc_chain = create_ret_chain_cborg(llm = self._llm,embeddings_func=embeddings, persist_directory = NOMIC_DOCS_DB_DIR)
         tutorial_chain = create_ret_chain_cborg(llm = self._llm,embeddings_func=embeddings, persist_directory = NOMIC_TUTORIALS_DB_DIR)
 
-        @tool("KG retrieval tool", return_direct=True)   
+        @tool("KG retrieval tool")   
         def KGretrieval_tool(input: str):
            """This tool has the KBase app Knowledge Graph. Useful for when you need to confirm the existance of KBase applications and their tooltip, version, category and data objects.
            This tool can also be used for finding total number of apps or which data objects are shared between apps.
            The input should always be a KBase app name or data object name and should not include any special characters or version number.
            Do not use this tool if you do not have an app or data object name to search with use the KBase Documentation or Tutorial tools instead
            """
-           return self._create_KG_agent().invoke({"input": input})['output']
+           
+           response = self._create_KG_agent().invoke({"input": input})
+           #Ensure that the response is properly formatted for the agent to use
+           if 'output' in response:
+                return response['output']
+           return "No response from the tool"
             
         tools = [
         Tool.from_function 
@@ -107,10 +113,6 @@ class MRKL_bot_cborg(KBaseChatBot):
     
     def _create_KG_agent(self):
         
-        tools = [InformationTool()]
-
-        llm_with_tools = self._llm.bind(functions=[format_tool_to_openai_function(t) for t in tools])
-        
         prompt = ChatPromptTemplate.from_messages(
             [
                 (
@@ -119,26 +121,13 @@ class MRKL_bot_cborg(KBaseChatBot):
                     "Use the tools provided to you to find KBase apps and related properties."
                     "Do only the things the user specifically requested. ",
                 ),
-                MessagesPlaceholder(variable_name="chat_history"),
                 ("user", "{input}"),
                 MessagesPlaceholder(variable_name="agent_scratchpad"),
             ]
         )
         
-        agent = (
-            {
-                "input": lambda x: x["input"],
-                "chat_history": lambda x: _format_chat_history(x["chat_history"])
-                if x.get("chat_history")
-                else [],
-                "agent_scratchpad": lambda x: format_to_openai_function_messages(
-                    x["intermediate_steps"]
-                ),
-            }
-            | prompt
-            | llm_with_tools
-            | OpenAIFunctionsAgentOutputParser()
-        )
+        tools=[InformationTool()]
+        agent = create_tool_calling_agent(self._llm, tools, prompt)
         agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
         return agent_executor
         
