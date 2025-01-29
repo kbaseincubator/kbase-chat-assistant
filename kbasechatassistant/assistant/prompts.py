@@ -5,6 +5,9 @@ DEFAULT_SYSTEM_PROMPT_TEMPLATE = """
 You are a helpful KBase research assistant. You answer user queries related to the KBase platform and systems biology. 
 
 """
+DEFAULT_PROMPT_VISION = """
+You are a vision assistant for the KBase team. Your job is to analayze images. These images are from a KBase app run.  
+"""
 
 # Dynamic system prompt support
 def create_mrkl_prompt(system_prompt_template: str = DEFAULT_SYSTEM_PROMPT_TEMPLATE):
@@ -59,3 +62,40 @@ def create_mrkl_prompt(system_prompt_template: str = DEFAULT_SYSTEM_PROMPT_TEMPL
             template=HUMAN_PROMPT_TEMPLATE
         )
     ])
+
+def create_vision_prompt(system_prompt_template: str = DEFAULT_PROMPT_VISION):
+    HUMAN_PROMPT_TEMPLATE = """
+
+    The image path for this image is: {image_path}
+    Answer the following questions as best you can. You have access to the following tools:
+
+    {tools}
+    Use the following format:
+
+    Question: the input question you must answer
+    Thought: you should always think about what to do
+    Action: the action to take, should be one of [{tool_names}]
+    Action Input: the input to the action
+    Observation: the result of the action
+    ... (this Thought/Action/Action Input/Observation can repeat N times)
+    Thought: I now know the final answer
+    Final Answer: the final answer to the original input question
+
+    Begin!
+    Here is the conversation so far:
+    {chat_history}
+
+    Question: {input}
+    Thought:{agent_scratchpad}
+    """
+
+    return ChatPromptTemplate.from_messages([
+            SystemMessagePromptTemplate.from_template(
+                template=system_prompt_template
+            ),
+            MessagesPlaceholder(variable_name='chat_history', optional=True),
+            HumanMessagePromptTemplate.from_template(
+                input_variables=["tools", "input", "image_path", "agent_scratchpad"],
+                template=HUMAN_PROMPT_TEMPLATE
+            )
+            ])
