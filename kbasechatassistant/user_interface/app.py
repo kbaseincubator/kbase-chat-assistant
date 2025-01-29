@@ -12,7 +12,12 @@ import os
 from kbasechatassistant.util.stream_handler import StreamHandler
 from langchain_community.callbacks import StreamlitCallbackHandler
 from langchain_core.runnables import RunnableConfig
+from kbasechatassistant.assistant.vision_bot_cborg import Llama_vision_bot_cborg
 
+def load_cborg_vision_agent(cborg_api_key):
+    os.environ["CBORG_API_KEY"] = cborg_api_key
+    model_name = "lbl/llama-vision"
+    return Llama_vision_bot_cborg(model_name=model_name, cborg_api_key=cborg_api_key)
 def load_cborg_llama_agent(cborg_api_key):
     llm = ChatOpenAI(
     model="lbl/llama",
@@ -61,7 +66,7 @@ def main():
     with st.sidebar:
         if "current_model" in st.session_state:
             st.markdown(f"**Active Model:** {st.session_state['current_model']}")
-        model_choice = st.selectbox("Choose a Model", ["gpt-4", "Mistral-7B-Instruct-v0.2", "CBORG GPT", "CBORG Llama","CBORG Anthropic" ])
+        model_choice = st.selectbox("Choose a Model", ["gpt-4", "Mistral-7B-Instruct-v0.2", "CBORG GPT", "CBORG Llama","CBORG Anthropic","CBORG Vision" ])
         OPENAI_API_KEY = None
         CBORG_API_KEY = None
 
@@ -69,7 +74,7 @@ def main():
             OPENAI_API_KEY = st.text_input("OpenAI API Key", type="password")
             if not OPENAI_API_KEY:
                 st.error("Please enter your OpenAI key")
-        if model_choice in ["CBORG GPT", "CBORG Llama","CBORG Anthropic"]:
+        if model_choice in ["CBORG GPT", "CBORG Llama","CBORG Anthropic","CBORG Vision"]:
             CBORG_API_KEY = st.text_input("CBORG API Key", type="password")
             if not CBORG_API_KEY:
                 st.error("Please enter your CBORG API key")
@@ -84,7 +89,7 @@ def main():
             if model_choice == "gpt-4" and not OPENAI_API_KEY:
                 st.error("Please provide an OpenAI API key and hit the submit button")
                 return
-            if model_choice in ["CBORG GPT", "CBORG Llama", "CBORG Anthropic"] and not CBORG_API_KEY:
+            if model_choice in ["CBORG GPT", "CBORG Llama", "CBORG Anthropic","CBORG Vision"] and not CBORG_API_KEY:
                 st.error("Please provide a CBORG API key and hit the submit button")
                 return
                 
@@ -103,6 +108,8 @@ def main():
                 elif model_choice == "CBORG Anthropic": 
                     st.session_state["agent"] = load_cborg_anthropic_agent(cborg_api_key=CBORG_API_KEY,system_prompt=user_system_prompt)
                     print("cborg Anthropic agent loaded")
+                elif model_choice == "CBORG Vision":
+                    st.session_state["agent"] = load_cborg_vision_agent(CBORG_API_KEY)
             else:
                 if model_choice == "gpt-4" and not isinstance(st.session_state["agent"], MRKL_bot):
                     st.session_state["agent"] = load_gpt_agent(OPENAI_API_KEY)
@@ -114,30 +121,46 @@ def main():
                     st.session_state["agent"] = load_cborg_llama_agent(CBORG_API_KEY)
                 elif model_choice == "CBORG Anthropic" and not isinstance(st.session_state["agent"], MRKL_bot_cborg):
                     st.session_state["agent"] = load_cborg_anthropic_agent(system_prompt=user_system_prompt, cborg_api_key=CBORG_API_KEY)
-    
-    # Initialize chat history
-    if "messages" not in st.session_state:
-        st.session_state["messages"] = [ChatMessage(role="assistant", content="How can I help you?")]
-    
-    for msg in st.session_state.messages:
-        st.chat_message(msg.role).write(msg.content)
-   
-    if prompt := st.chat_input(): 
-        # Add user message to chat history
-        st.session_state.messages.append(ChatMessage(role="user", content=prompt))
-        # Display user message in chat message container
-        with st.chat_message("user"):
-            st.markdown(prompt)
+                elif model_choice == "CBORG Vision" and not isinstance(st.session_state["agent"], Llama_vision_bot_cborg):
+                    st.session_state["agent"] = load_cborg_vision_agent(cborg_api_key=CBORG_API_KEY)
+
+    if model_choice == "CBORG Vision":
+        uploaded_file = st.file_uploader("Upload an image for analysis (JPEG format)", type=["jpg", "jpeg"])
+        if uploaded_file:
+            image_path = f"/tmp/{uploaded_file.name}"
+            with open(image_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            # Display the uploaded image
+            st.image(image_path, caption="Uploaded Image", use_container_width=True)
+            with st.spinner("Analyzing image..."):
+                response = st.session_state["agent"].perform_image_analysis(image_path)
+                
+                st.success("Image analyzed successfully!")
+                st.markdown(f"**Analysis Output:** {response}")
+    else:
+        # Initialize chat history
+        if "messages" not in st.session_state:
+            st.session_state["messages"] = [ChatMessage(role="assistant", content="How can I help you?")]
         
-        with st.spinner("Thinking..."):
-            assistant_message = st.chat_message("assistant")
-            with assistant_message:
-                st_callback = StreamlitCallbackHandler(assistant_message)
-                cfg = RunnableConfig()
-                cfg["callbacks"] = [st_callback]
-                response = st.session_state["agent"].agent_executor.invoke({"input": prompt}, cfg)
-                st.markdown(response['output'])
-        st.session_state.messages.append(ChatMessage(role="assistant",content=response['output']))
+        for msg in st.session_state.messages:
+            st.chat_message(msg.role).write(msg.content)
+    
+        if prompt := st.chat_input(): 
+            # Add user message to chat history
+            st.session_state.messages.append(ChatMessage(role="user", content=prompt))
+            # Display user message in chat message container
+            with st.chat_message("user"):
+                st.markdown(prompt)
+            
+            with st.spinner("Thinking..."):
+                assistant_message = st.chat_message("assistant")
+                with assistant_message:
+                    st_callback = StreamlitCallbackHandler(assistant_message)
+                    cfg = RunnableConfig()
+                    cfg["callbacks"] = [st_callback]
+                    response = st.session_state["agent"].agent_executor.invoke({"input": prompt}, cfg)
+                    st.markdown(response['output'])
+            st.session_state.messages.append(ChatMessage(role="assistant",content=response['output']))
         
 if __name__ == "__main__":
     main()
