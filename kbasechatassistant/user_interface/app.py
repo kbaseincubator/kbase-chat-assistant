@@ -14,8 +14,14 @@ from langchain_community.callbacks import StreamlitCallbackHandler
 from langchain_core.runnables import RunnableConfig
 from kbasechatassistant.assistant.vision_bot_cborg import Llama_vision_bot_cborg
 
+def load_cborg_deepseek_agent(cborg_api_key,system_prompt):
+    llm = ChatOpenAI(
+    model="lbl/cborg-deepthought:latest",
+    api_key=cborg_api_key,
+    base_url="https://api.cborg.lbl.gov"  
+    )
+    return MRKL_bot_cborg(llm=llm,system_prompt_template=system_prompt, cborg_api_key=cborg_api_key)
 def load_cborg_vision_agent(cborg_api_key):
-    os.environ["CBORG_API_KEY"] = cborg_api_key
     model_name = "lbl/llama-vision"
     return Llama_vision_bot_cborg(model_name=model_name, cborg_api_key=cborg_api_key)
 def load_cborg_llama_agent(cborg_api_key):
@@ -66,7 +72,7 @@ def main():
     with st.sidebar:
         if "current_model" in st.session_state:
             st.markdown(f"**Active Model:** {st.session_state['current_model']}")
-        model_choice = st.selectbox("Choose a Model", ["gpt-4", "Mistral-7B-Instruct-v0.2", "CBORG GPT", "CBORG Llama","CBORG Anthropic","CBORG Vision" ])
+        model_choice = st.selectbox("Choose a Model", ["gpt-4", "Mistral-7B-Instruct-v0.2", "CBORG GPT", "CBORG Llama","CBORG Anthropic","CBORG Deepseek","CBORG Vision" ])
         OPENAI_API_KEY = None
         CBORG_API_KEY = None
 
@@ -74,7 +80,7 @@ def main():
             OPENAI_API_KEY = st.text_input("OpenAI API Key", type="password")
             if not OPENAI_API_KEY:
                 st.error("Please enter your OpenAI key")
-        if model_choice in ["CBORG GPT", "CBORG Llama","CBORG Anthropic","CBORG Vision"]:
+        if model_choice in ["CBORG GPT", "CBORG Llama","CBORG Anthropic","CBORG Deepseek","CBORG Vision"]:
             CBORG_API_KEY = st.text_input("CBORG API Key", type="password")
             if not CBORG_API_KEY:
                 st.error("Please enter your CBORG API key")
@@ -89,7 +95,7 @@ def main():
             if model_choice == "gpt-4" and not OPENAI_API_KEY:
                 st.error("Please provide an OpenAI API key and hit the submit button")
                 return
-            if model_choice in ["CBORG GPT", "CBORG Llama", "CBORG Anthropic","CBORG Vision"] and not CBORG_API_KEY:
+            if model_choice in ["CBORG GPT", "CBORG Llama", "CBORG Anthropic","CBORG Deepseek","CBORG Vision"] and not CBORG_API_KEY:
                 st.error("Please provide a CBORG API key and hit the submit button")
                 return
                 
@@ -108,8 +114,12 @@ def main():
                 elif model_choice == "CBORG Anthropic": 
                     st.session_state["agent"] = load_cborg_anthropic_agent(cborg_api_key=CBORG_API_KEY,system_prompt=user_system_prompt)
                     print("cborg Anthropic agent loaded")
+                elif model_choice == "CBORG Deepseek": 
+                    st.session_state["agent"] = load_cborg_deepseek_agent(cborg_api_key=CBORG_API_KEY,system_prompt=user_system_prompt)
+                    print("cborg Anthropic agent loaded")
                 elif model_choice == "CBORG Vision":
                     st.session_state["agent"] = load_cborg_vision_agent(CBORG_API_KEY)
+                    print("cborg Llama Vision loaded")
             else:
                 if model_choice == "gpt-4" and not isinstance(st.session_state["agent"], MRKL_bot):
                     st.session_state["agent"] = load_gpt_agent(OPENAI_API_KEY)
@@ -121,6 +131,8 @@ def main():
                     st.session_state["agent"] = load_cborg_llama_agent(CBORG_API_KEY)
                 elif model_choice == "CBORG Anthropic" and not isinstance(st.session_state["agent"], MRKL_bot_cborg):
                     st.session_state["agent"] = load_cborg_anthropic_agent(system_prompt=user_system_prompt, cborg_api_key=CBORG_API_KEY)
+                elif model_choice == "CBORG Deepseek" and not isinstance(st.session_state["agent"], MRKL_bot_cborg):
+                    st.session_state["agent"] = load_cborg_deepseek_agent(system_prompt=user_system_prompt, cborg_api_key=CBORG_API_KEY)
                 elif model_choice == "CBORG Vision" and not isinstance(st.session_state["agent"], Llama_vision_bot_cborg):
                     st.session_state["agent"] = load_cborg_vision_agent(cborg_api_key=CBORG_API_KEY)
 
