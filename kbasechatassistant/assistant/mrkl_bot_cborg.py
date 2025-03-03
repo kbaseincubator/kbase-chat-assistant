@@ -8,7 +8,7 @@ from kbasechatassistant.tools.ragchain import create_ret_chain_cborg
 #from kbasechatassistant.embeddings.embeddings import HF_CATALOG_DB_DIR, HF_DOCS_DB_DIR, HF_TUTORIALS_DB_DIR
 from kbasechatassistant.embeddings.embeddings import NOMIC_CATALOG_DB_DIR, NOMIC_DOCS_DB_DIR, NOMIC_TUTORIALS_DB_DIR
 from langchain.agents import Tool, AgentExecutor, create_react_agent, create_tool_calling_agent
-from kbasechatassistant.tools.information_tool import InformationTool
+from kbasechatassistant.tools.kgtool_cosine_sim import InformationTool
 from langchain.agents.format_scratchpad import format_to_openai_function_messages
 from langchain.tools.render import format_tool_to_openai_function
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -76,7 +76,7 @@ class MRKL_bot_cborg(KBaseChatBot):
 
         @tool("KG retrieval tool")   
         def KGretrieval_tool(input: str):
-           """This tool has the KBase app Knowledge Graph. Useful for when you need to confirm the existance of KBase applications and their tooltip, version, category and data objects.
+           """This tool has the KBase app Knowledge Graph. Useful for when you need to confirm the existance of KBase applications and their appid, tooltip, version, category and data objects.
            This tool can also be used for finding total number of apps or which data objects are shared between apps.
            The input should always be a KBase app name or data object name and should not include any special characters or version number.
            Do not use this tool if you do not have an app or data object name to search with use the KBase Documentation or Tutorial tools instead
@@ -93,7 +93,13 @@ class MRKL_bot_cborg(KBaseChatBot):
         (
             name="KBase Documentation",
             func=doc_chain.run,
-            description="This tool has the KBase documentation. This tool should be the first place to check anything related to KBase and its apps. Use this for making app recommendations. Useful for when you need to find KBase applications to use for user tasks and how to use them. Input should be a fully formed question."
+            description="""This tool should be used for making app recommendations, designing a recommendation plan or analysis workflow. 
+            It searches the Kbase documentation. It is useful for answering questions about how to use KBase applications. 
+            It does not contain a list of KBase apps.
+            Do not use it to search for KBase app presence.
+            Use this for making app recommendations. 
+            Useful for when you need to find KBase applications to use for user tasks and how to use them. 
+            Input should be a fully formed question."""
         ),
         Tool.from_function 
         (
@@ -117,17 +123,18 @@ class MRKL_bot_cborg(KBaseChatBot):
             [
                 (
                     "system",
-                    "You are a helpful tool that finds information about KBase applications in the Knowledge Graph "
-                    "Use the tools provided to you to find KBase apps and related properties."
-                    "Do only the things the user specifically requested. ",
+                    """You are a helpful tool that finds information about KBase applications in the Knowledge Graph 
+                    Use the tools provided to you to find KBase apps and related properties.
+                    Do only the things the user specifically requested.
+                    """,
                 ),
                 ("user", "{input}"),
                 MessagesPlaceholder(variable_name="agent_scratchpad"),
             ]
         )
         
-        tools=[InformationTool()]
+        tools=[InformationTool(uri=os.environ.get('NEO4J_URI'), user=os.environ.get('NEO4J_USERNAME'), password=os.environ.get('NEO4J_PASSWORD'))]
         agent = create_tool_calling_agent(self._llm, tools, prompt)
-        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+        agent_executor = AgentExecutor(agent=agent, tools=tools,return_intermediate_steps=True, verbose=True)
         return agent_executor
         

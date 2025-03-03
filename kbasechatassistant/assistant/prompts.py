@@ -43,6 +43,8 @@ def create_mrkl_prompt(system_prompt_template: str = DEFAULT_SYSTEM_PROMPT_TEMPL
     -When suggesting apps to user for performing analysis make sure to review the associated meta data and select analysis steps or apps accordingly.
     -When generating detailed multi step analysis plans, be precise suggesting one app per step.
     -Make sure to make recommendations of apps that exist in KBase.
+    -Always use the KBase Documentation tool to find relevant KBase apps then check the Knowledge Graph to find the full app name, appid, tooltip, version, category and data objects.
+    -Do not use the Knowledge Graph tool if you do not have an app or data object name to search with use the KBase Documentation or Tutorial tools instead.
     Here is the history of the conversation so far:
     {mrkl_chat_history}
     Begin!

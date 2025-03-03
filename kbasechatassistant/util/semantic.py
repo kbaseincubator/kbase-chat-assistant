@@ -47,7 +47,7 @@ class Semantic:
     
         This function constructs a query string suitable for a full-text search.
         It processes the input string by splitting it into words and appending a
-        similarity threshold (~0.8) to each word, then combines them using the AND
+        similarity threshold (~0.85) to each word, then combines them using the AND
         operator. Useful for mapping KBase apps and DataObjects from user questions
         to database values, and allows for some misspelings.
         """
@@ -79,3 +79,4 @@ class Semantic:
             candidate_query, {"fulltextQuery": ft_query, "index": type, "limit": limit}
         )
         return candidates
+ 
